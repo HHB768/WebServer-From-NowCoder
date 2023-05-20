@@ -1,0 +1,80 @@
+// int pthread_rwlock_destroy(pthread_rwlock_t *rwlock);
+// int pthread_rwlock_init(pthread_rwlock_t *restrict rwlock,
+//     const pthread_rwlockattr_t *restrict attr);
+// int pthread_rwlock_rdlock(pthread_rwlock_t *rwlock);
+// int pthread_rwlock_tryrdlock(pthread_rwlock_t *rwlock);
+// int pthread_rwlock_wrlock(pthread_rwlock_t *rwlock);
+// int pthread_rwlock_trywrlock(pthread_rwlock_t *rwlock);
+// int pthread_rwlock_unlock(pthread_rwlock_t *rwlock);
+
+// 演示一下8个线程操作全局变量
+// 3写5读
+
+#define _GNU_SOURCE 1
+#include <stdio.h>
+#include <pthread.h>
+#include <string.h>
+#include <unistd.h>
+#include <stdlib.h>
+
+
+int num = 1;
+// pthread_mutex_t mutex;
+pthread_rwlock_t rwlock;
+
+void * writeNum(void * arg)
+{
+    while (1)
+    {
+        pthread_rwlock_wrlock(&rwlock);
+        num++;
+        printf("++write, tid: %ld, num : %d\n", pthread_self(), num);
+        pthread_rwlock_unlock(&rwlock);
+        usleep(100);
+    }
+    
+    return NULL;
+}
+
+void * readNum(void * arg)
+{
+    while (1)
+    {  
+        pthread_rwlock_rdlock(&rwlock);
+        printf("==read, tid: %ld, num : %d\n", pthread_self(), num);
+        pthread_rwlock_unlock(&rwlock);
+        usleep(100);
+    }
+
+    return NULL;
+}
+
+int main()
+{
+    // pthread_mutex_init(&mutex, NULL);
+    pthread_rwlock_init(&rwlock, NULL);
+
+    pthread_t wtids[3], rtids[5];
+
+    for(int i=0; i<3; i++)
+    {
+        pthread_create(&wtids[i], NULL, writeNum, NULL);
+    }
+    for(int i=0; i<5; i++)
+    {
+        pthread_create(&rtids[i], NULL, readNum, NULL);
+    }
+
+    for(int i=0; i<3; i++)
+    {
+        pthread_detach(wtids[i]);
+    }
+    for(int i=0; i<5; i++)
+    {
+        pthread_detach(rtids[i]);
+    }
+
+    pthread_exit(NULL);
+
+    return 0;
+}
